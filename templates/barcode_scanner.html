@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Barcode Scanner{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Barcode Scanner</h1>
+        <a href="{{ url_for('dashboard') }}" class="btn-secondary flex items-center">
+            <i class="bi bi-arrow-left mr-2"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <div class="bg-gray-900 rounded-lg overflow-hidden mb-4">
+        <div id="reader" style="width: 100%; min-height: 400px;"></div>
+    </div>
+
+    <div class="text-center mb-6">
+        <button id="startButton" class="btn-primary px-4 py-2 rounded-md">
+            <i class="bi bi-camera mr-2"></i> Start Camera
+        </button>
+        <button id="stopButton" class="btn-secondary px-4 py-2 rounded-md ml-2" style="display: none;">
+            <i class="bi bi-stop-circle mr-2"></i> Stop Camera
+        </button>
+    </div>
+
+    <form action="{{ url_for('barcode_scanner') }}" method="post" id="barcodeForm" class="mb-8">
+        <div class="flex">
+            <input type="text" name="barcode" id="barcodeInput" placeholder="Scan or enter barcode" required 
+                   class="form-input flex-grow rounded-l-md border-r-0">
+            <button type="submit" class="btn-primary px-6 py-2 rounded-r-md">
+                Submit
+            </button>
+        </div>
+    </form>
+
+    <div id="orderDetailsContainer">
+        {% if order %}
+            {% include '_order_details.html' %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- HTML5 QR Code Scanner Library -->
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<script>
+    const barcodeInput = document.getElementById('barcodeInput');
+    const barcodeForm = document.getElementById('barcodeForm');
+    const startButton = document.getElementById('startButton');
+    const stopButton = document.getElementById('stopButton');
+    const orderDetailsContainer = document.getElementById('orderDetailsContainer');
+    let html5QrCode;
+
+    // Function to initialize restock form handler
+    function initRestockForm() {
+        const form = document.querySelector('#restockForm');
+        if (!form) return;
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams(new FormData(this))
+            })
+            .then(response => response.text())
+            .then(html => {
+                orderDetailsContainer.innerHTML = html;
+                // Re-initialize form handler after content update
+                setTimeout(initRestockForm, 100);
+            })
+            .catch(error => {
+                console.error('Error restocking:', error);
+                const errorHtml = `
+                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+                        <p>Error restocking order. Please try again.</p>
+                    </div>
+                `;
+                orderDetailsContainer.insertAdjacentHTML('afterbegin', errorHtml);
+            });
+        });
+    }
+
+    async function startScanner() {
+        try {
+            html5QrCode = new Html5Qrcode("reader");
+            
+            const config = {
+                fps: 10,
+                qrbox: { width: 450, height: 200 },
+                aspectRatio: 16/9,
+            };
+            
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                onScanFailure
+            );
+            
+            startButton.style.display = 'none';
+            stopButton.style.display = 'inline-block';
+        } catch (err) {
+            console.error('Scanner error:', err);
+        }
+    }
+
+    async function stopScanner() {
+        if (html5QrCode) {
+            try {
+                await html5QrCode.stop();
+                startButton.style.display = 'inline-block';
+                stopButton.style.display = 'none';
+            } catch (err) {
+                console.error('Error stopping scanner:', err);
+            }
+        }
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        console.log('Scan successful:', decodedText);
+        barcodeInput.value = decodedText;
+        
+        // Stop the scanner
+        stopScanner().then(() => {
+            // Submit form using fetch
+            submitForm();
+        });
+    }
+
+    function onScanFailure(error) {
+        if (error?.message?.includes('NotAllowed')) {
+            console.error('Camera access denied');
+        }
+    }
+
+    function submitForm() {
+        fetch(barcodeForm.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams(new FormData(barcodeForm))
+        })
+        .then(response => response.text())
+        .then(html => {
+            orderDetailsContainer.innerHTML = html;
+            // Initialize restock form handler after content update
+            setTimeout(initRestockForm, 100);
+        })
+        .catch(error => {
+            console.error('Error submitting form:', error);
+        });
+    }
+
+    // Event listeners
+    startButton.addEventListener('click', startScanner);
+    stopButton.addEventListener('click', stopScanner);
+
+    // Handle form submission
+    barcodeForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        stopScanner();
+        submitForm();
+    });
+
+    // Function to restart scanner (used by order details template)
+    function restartScanner() {
+        orderDetailsContainer.innerHTML = '';
+        startScanner();
+    }
+
+    // Initialize restock form handler on page load
+    initRestockForm();
+
+    // Re-initialize form handler when content changes
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList') {
+                initRestockForm();
+            }
+        });
+    });
+
+    observer.observe(orderDetailsContainer, {
+        childList: true,
+        subtree: true
+    });
+</script>
+{% endblock %}

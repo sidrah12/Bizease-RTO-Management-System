@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Add Order{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-primary to-primary-dark p-6">
+            <div class="flex items-center">
+                <i class="bi bi-cart text-2xl text-white mr-3"></i>
+                <h1 class="text-2xl font-bold text-white">Add New Order</h1>
+            </div>
+        </div>
+        <div class="p-6">
+            {% if error %}
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+                <div class="flex items-center">
+                    <i class="bi bi-exclamation-circle text-red-500 mr-3"></i>
+                    <p class="text-red-700">{{ error }}</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <form method="POST" class="space-y-6">
+                <!-- Customer Information -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="bi bi-person text-primary mr-2"></i>
+                        Customer Information
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                            <input type="text" id="customer_name" name="customer_name" required
+                                   class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                            <input type="email" id="email" name="email" required
+                                   class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                        </div>
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                            <input type="tel" id="phone" name="phone" required
+                                   class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                        </div>
+                        <div>
+                            <label for="payment_method" class="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                            <select id="payment_method" name="payment_method" required
+                                    class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                                <option value="">Select payment method</option>
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="Debit Card">Debit Card</option>
+                                <option value="UPI">UPI</option>
+                                <option value="Net Banking">Net Banking</option>
+                                <option value="Cash on Delivery">Cash on Delivery</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shipping Address -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="bi bi-geo-alt text-primary mr-2"></i>
+                        Shipping Address
+                    </h2>
+                    <div class="space-y-6">
+                        <div>
+                            <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Complete Address</label>
+                            <textarea id="address" name="address" rows="4" required
+                                      class="w-full rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm"></textarea>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label for="city" class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                                <input type="text" id="city" name="city" required
+                                       class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                            </div>
+                            <div>
+                                <label for="state" class="block text-sm font-medium text-gray-700 mb-1">State</label>
+                                <input type="text" id="state" name="state" required
+                                       class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                            </div>
+                            <div>
+                                <label for="pincode" class="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
+                                <input type="text" id="pincode" name="pincode" required
+                                       class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Details -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="bi bi-box text-primary mr-2"></i>
+                        Order Details
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="md:col-span-2">
+                            <label for="product_id" class="block text-sm font-medium text-gray-700 mb-1">Select Product</label>
+                            <select id="product_id" name="product_id" required
+                                    class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                                <option value="">Select a product</option>
+                                {% for product in products %}
+                                <option value="{{ product.id }}" data-price="{{ product.price }}">
+                                    {{ product.title }} - ₹{{ product.price }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                            <input type="number" id="quantity" name="quantity" min="1" value="1" required
+                                   class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                        </div>
+                        <div class="md:col-span-3">
+                            <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
+                            <input type="number" id="amount" name="amount" step="0.01" readonly required
+                                   class="w-full h-12 rounded-lg border-gray-300 bg-gray-50 shadow-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-4">
+                    <a href="{{ url_for('orders') }}" 
+                       class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center">
+                        <i class="bi bi-x-lg mr-2"></i>
+                        Cancel
+                    </a>
+                    <button type="submit" 
+                            class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark flex items-center">
+                        <i class="bi bi-check-lg mr-2"></i>
+                        Create Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productSelect = document.getElementById('product_id');
+    const quantityInput = document.getElementById('quantity');
+    const amountInput = document.getElementById('amount');
+    
+    function updateAmount() {
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        if (selectedOption.value) {
+            const price = parseFloat(selectedOption.dataset.price);
+            const quantity = parseInt(quantityInput.value) || 0;
+            amountInput.value = (price * quantity).toFixed(2);
+        } else {
+            amountInput.value = '';
+        }
+    }
+    
+    productSelect.addEventListener('change', updateAmount);
+    quantityInput.addEventListener('input', updateAmount);
+    
+    // Initial amount calculation
+    updateAmount();
+});
+</script>
+{% endblock %}

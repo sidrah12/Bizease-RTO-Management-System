@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Edit Order{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Edit Order</h1>
+        <a href="{{ url_for('orders') }}" class="btn-secondary flex items-center">
+            <i class="bi bi-arrow-left mr-2"></i> Back to Orders
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="p-6">
+            {% if error %}
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{{ error }}</div>
+            {% endif %}
+            
+            <form method="POST" class="space-y-6">
+                <!-- Customer Information -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Customer Information</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                <i class="bi bi-person"></i> Customer Name
+                            </label>
+                            <input type="text" class="form-input w-full" id="customer_name" name="customer_name" 
+                                value="{{ order.customer_name }}" required>
+                        </div>
+                        
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+                                <i class="bi bi-envelope"></i> Email
+                            </label>
+                            <input type="email" class="form-input w-full" id="email" name="email" 
+                                value="{{ order.email }}" required>
+                        </div>
+
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
+                                <i class="bi bi-telephone"></i> Phone
+                            </label>
+                            <input type="tel" class="form-input w-full" id="phone" name="phone" 
+                                value="{{ order.phone }}" required>
+                        </div>
+                        
+                        <div>
+                            <label for="payment_method" class="block text-sm font-medium text-gray-700 mb-1">
+                                <i class="bi bi-credit-card"></i> Payment Method
+                            </label>
+                            <select class="form-select w-full" id="payment_method" name="payment_method" required>
+                                <option value="Credit Card" {% if order.payment_method == 'Credit Card' %}selected{% endif %}>Credit Card</option>
+                                <option value="Debit Card" {% if order.payment_method == 'Debit Card' %}selected{% endif %}>Debit Card</option>
+                                <option value="UPI" {% if order.payment_method == 'UPI' %}selected{% endif %}>UPI</option>
+                                <option value="Net Banking" {% if order.payment_method == 'Net Banking' %}selected{% endif %}>Net Banking</option>
+                                <option value="Cash on Delivery" {% if order.payment_method == 'Cash on Delivery' %}selected{% endif %}>Cash on Delivery</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shipping Information -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Shipping Information</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="address" class="block text-sm font-medium text-gray-700 mb-1">
+                                <i class="bi bi-geo-alt"></i> Address
+                            </label>
+                            <textarea class="form-textarea w-full" id="address" name="address" rows="2" required>{{ order.address }}</textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label for="city" class="block text-sm font-medium text-gray-700 mb-1">
+                                    <i class="bi bi-building"></i> City
+                                </label>
+                                <input type="text" class="form-input w-full" id="city" name="city" 
+                                    value="{{ order.city }}" required>
+                            </div>
+                            
+                            <div>
+                                <label for="state" class="block text-sm font-medium text-gray-700 mb-1">
+                                    <i class="bi bi-map"></i> State
+                                </label>
+                                <input type="text" class="form-input w-full" id="state" name="state" 
+                                    value="{{ order.state }}" required>
+                            </div>
+                            
+                            <div>
+                                <label for="pincode" class="block text-sm font-medium text-gray-700 mb-1">
+                                    <i class="bi bi-pin-map"></i> Pincode
+                                </label>
+                                <input type="text" class="form-input w-full" id="pincode" name="pincode" 
+                                    value="{{ order.pincode }}" required>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="address_classification" class="block text-sm font-medium text-gray-700 mb-1">
+                                <i class="bi bi-geo"></i> Address Classification
+                            </label>
+                            <select class="form-select w-full" id="address_classification" name="address_classification" required>
+                                <option value="Urban" {% if order.address_classification == 'Urban' %}selected{% endif %}>Urban</option>
+                                <option value="Rural" {% if order.address_classification == 'Rural' %}selected{% endif %}>Rural</option>
+                                <option value="Semi-Urban" {% if order.address_classification == 'Semi-Urban' %}selected{% endif %}>Semi-Urban</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Information -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Order Information</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="product_id" class="block text-sm font-medium text-gray-700 mb-1">
+                                <i class="bi bi-box"></i> Product
+                            </label>
+                            <select class="form-select w-full" id="product_id" name="product_id" required>
+                                {% for product in products %}
+                                <option value="{{ product.id }}" {% if order.product_id == product.id %}selected{% endif %}>
+                                    {{ product.title }} - ₹{{ product.price }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">
+                                <i class="bi bi-123"></i> Quantity
+                            </label>
+                            <input type="number" class="form-input w-full" id="quantity" name="quantity" 
+                                value="{{ order.quantity }}" min="1" required>
+                        </div>
+                        
+                        <div>
+                            <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">
+                                <i class="bi bi-currency-rupee"></i> Amount
+                            </label>
+                            <input type="number" class="form-input w-full" id="amount" name="amount" 
+                                value="{{ order.amount }}" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label for="status" class="block text-sm font-medium text-gray-700 mb-1">
+                            <i class="bi bi-list-check"></i> Status
+                        </label>
+                        <select class="form-select w-full" id="status" name="status" required>
+                            <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
+                            <option value="Processing" {% if order.status == 'Processing' %}selected{% endif %}>Processing</option>
+                            <option value="Shipped" {% if order.status == 'Shipped' %}selected{% endif %}>Shipped</option>
+                            <option value="Delivered" {% if order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+                            <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                            <option value="RTO" {% if order.status == 'RTO' %}selected{% endif %}>RTO</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-end space-x-3">
+                    <a href="{{ url_for('orders') }}" class="btn-secondary">Cancel</a>
+                    <button type="submit" class="btn-primary">Update Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Calculate amount based on product and quantity
+    const productSelect = document.getElementById('product_id');
+    const quantityInput = document.getElementById('quantity');
+    const amountInput = document.getElementById('amount');
+    
+    function updateAmount() {
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        const price = parseFloat(selectedOption.text.split('₹')[1]);
+        const quantity = parseInt(quantityInput.value);
+        amountInput.value = (price * quantity).toFixed(2);
+    }
+    
+    productSelect.addEventListener('change', updateAmount);
+    quantityInput.addEventListener('input', updateAmount);
+    
+    // Initial amount calculation
+    updateAmount();
+});
+</script>
+{% endblock %}

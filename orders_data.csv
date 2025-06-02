@@ -1,0 +1,11 @@
+first_name,last_name,email,phone,address_line1,address_line2,city,state,pincode,payment_method,quantity,status
+Rahul,Kumar,rahul.k@email.com,9876543210,123 Main Street,Apartment 4B,Mumbai,Maharashtra,400001,COD,2,Pending
+Priya,Singh,priya.s@email.com,8765432109,456 Park Road,,Delhi,Delhi,110001,Credit Card,1,Shipped
+Amit,Patel,amit.p@email.com,7654321098,789 Lake View,Block C,Bangalore,Karnataka,560001,UPI,3,Delivered
+Sneha,Sharma,sneha.s@email.com,6543210987,321 Hill Road,Tower 2,Chennai,Tamil Nadu,600001,COD,1,Pending
+Mohammed,Khan,mk@email.com,5432109876,567 Market Street,,Hyderabad,Telangana,500001,PayPal,2,Shipped
+Anjali,Gupta,anjali.g@email.com,4321098765,890 Remote Village,Near Temple,Nagpur,Maharashtra,440001,COD,1,Pending
+Rajesh,Verma,rajesh.v@email.com,3210987654,234 Tech Park,Sector 5,Pune,Maharashtra,411001,Net Banking,4,Delivered
+Deepa,Reddy,deepa.r@email.com,2109876543,678 Rural Area,,Mysore,Karnataka,570001,COD,2,Shipped
+Vikram,Malhotra,vikram.m@email.com,1098765432,901 Business Hub,Floor 3,Kolkata,West Bengal,700001,Credit Card,1,Delivered
+Sonia,Joshi,sonia.j@email.com,9087654321,345 Remote Colony,Behind School,Indore,Madhya Pradesh,452001,COD,3,Pending 

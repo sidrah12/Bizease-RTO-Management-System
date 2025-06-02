@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Add Product{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-primary to-primary-dark p-6">
+            <div class="flex items-center">
+                <i class="bi bi-box text-2xl text-white mr-3"></i>
+                <h1 class="text-2xl font-bold text-white">Add New Product</h1>
+            </div>
+        </div>
+        <div class="p-6">
+            {% if error %}
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+                <div class="flex items-center">
+                    <i class="bi bi-exclamation-circle text-red-500 mr-3"></i>
+                    <p class="text-red-700">{{ error }}</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                <!-- Basic Information -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="bi bi-info-circle text-primary mr-2"></i>
+                        Basic Information
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Product Title</label>
+                            <input type="text" id="title" name="title" required
+                                   class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                        </div>
+                        <div>
+                            <label for="sku" class="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                            <input type="text" id="sku" name="sku" required
+                                   class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <textarea id="description" name="description" rows="4" required
+                                      class="w-full rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing and Inventory -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="bi bi-tag text-primary mr-2"></i>
+                        Pricing & Inventory
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label for="price" class="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                            <input type="number" id="price" name="price" step="0.01" required
+                                   class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                        </div>
+                        <div>
+                            <label for="stock" class="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+                            <input type="number" id="stock" name="stock" min="0" required
+                                   class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                        </div>
+                        <div>
+                            <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                            <select id="category" name="category" required
+                                    class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                                <option value="">Select a category</option>
+                                <option value="Electronics">Electronics</option>
+                                <option value="Clothing">Clothing</option>
+                                <option value="Books">Books</option>
+                                <option value="Home">Home & Living</option>
+                                <option value="Beauty">Beauty</option>
+                                <option value="Sports">Sports</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Details -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="bi bi-card-list text-primary mr-2"></i>
+                        Product Details
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label for="dimensions" class="block text-sm font-medium text-gray-700 mb-1">Dimensions</label>
+                            <input type="text" id="dimensions" name="dimensions"
+                                   class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm"
+                                   placeholder="e.g., 10x20x30 cm">
+                        </div>
+                        <div>
+                            <label for="weight" class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                            <input type="number" id="weight" name="weight" step="0.01" min="0"
+                                   class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                        </div>
+                        <div>
+                            <label for="shelf_life" class="block text-sm font-medium text-gray-700 mb-1">Shelf Life (days)</label>
+                            <input type="number" id="shelf_life" name="shelf_life" min="0"
+                                   class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Image -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="bi bi-image text-primary mr-2"></i>
+                        Product Image
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-center w-full">
+                            <label class="w-full flex flex-col items-center px-4 py-6 bg-white rounded-lg shadow-lg tracking-wide border border-gray-300 cursor-pointer hover:bg-gray-50">
+                                <i class="bi bi-cloud-upload text-primary text-3xl"></i>
+                                <span class="mt-2 text-base">Select a file</span>
+                                <input type="file" id="image" name="image" accept="image/*" required
+                                       class="w-full h-12 rounded-lg border-gray-300 focus:border-primary focus:ring-primary shadow-sm">
+                            </label>
+                        </div>
+                        <div id="imagePreview" class="hidden mt-4">
+                            <img src="" alt="Preview" class="max-h-48 mx-auto rounded-lg shadow-md">
+                        </div>
+                        <p class="text-sm text-gray-500">Supported formats: JPG, PNG, GIF. Max size: 5MB</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-4">
+                    <a href="{{ url_for('products') }}" 
+                       class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center">
+                        <i class="bi bi-x-lg mr-2"></i>
+                        Cancel
+                    </a>
+                    <button type="submit" 
+                            class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark flex items-center">
+                        <i class="bi bi-check-lg mr-2"></i>
+                        Create Product
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Image preview functionality
+document.getElementById('image').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        const preview = document.getElementById('imagePreview');
+        const previewImage = preview.querySelector('img');
+        
+        reader.onload = function(e) {
+            previewImage.src = e.target.result;
+            preview.classList.remove('hidden');
+        }
+        
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}

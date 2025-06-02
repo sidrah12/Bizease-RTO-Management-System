@@ -1,0 +1,695 @@
+{% extends 'base.html' %}
+
+{% block title %}Return Analytics{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Return Analytics</h1>
+            <p class="text-sm text-gray-600 mt-1">Analyze and predict return-to-origin risks for your orders</p>
+        </div>
+        <div class="flex space-x-3">
+            <a href="{{ url_for('dashboard') }}" class="btn-secondary flex items-center">
+                <i class="bi bi-arrow-left mr-2"></i> Back to Dashboard
+            </a>
+            <button class="btn-primary flex items-center" onclick="document.getElementById('helpModal').classList.remove('hidden')">
+                <i class="bi bi-question-circle mr-2"></i> Help
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    {% if rto_results %}
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <div class="p-4">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-500 bg-opacity-20 mr-4">
+                        <i class="bi bi-box-seam text-blue-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-blue-600">Total Orders</p>
+                        <p class="text-2xl font-bold text-blue-800">{{ rto_results|length }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+            <div class="p-4">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-red-500 bg-opacity-20 mr-4">
+                        <i class="bi bi-exclamation-triangle text-red-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-red-600">High Risk</p>
+                        <p class="text-2xl font-bold text-red-800">{{ rto_results|selectattr('rto_risk', 'equalto', 'High')|list|length }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+            <div class="p-4">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-yellow-500 bg-opacity-20 mr-4">
+                        <i class="bi bi-exclamation-circle text-yellow-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-yellow-600">Medium Risk</p>
+                        <p class="text-2xl font-bold text-yellow-800">{{ rto_results|selectattr('rto_risk', 'equalto', 'Medium')|list|length }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <div class="p-4">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-500 bg-opacity-20 mr-4">
+                        <i class="bi bi-check-circle text-green-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-green-600">Low Risk</p>
+                        <p class="text-2xl font-bold text-green-800">{{ rto_results|selectattr('rto_risk', 'equalto', 'Low')|list|length }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card mb-8">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-900">Upload Orders for Analysis</h2>
+                <div class="flex space-x-3">
+                    <a href="{{ url_for('download_rto_template') }}" class="text-sm text-primary hover:text-primary-dark flex items-center">
+                        <i class="bi bi-download mr-1"></i> Download Template
+                    </a>
+                    <button onclick="trainModel()" class="text-sm text-primary hover:text-primary-dark flex items-center">
+                        <i class="bi bi-gear mr-1"></i> Train Model
+                    </button>
+                </div>
+            </div>
+            <p class="text-gray-600 mb-6">Upload a CSV or Excel file containing order data to analyze return-to-origin (RTO) risks.</p>
+            
+            <form action="{{ url_for('rto_checker') }}" method="post" enctype="multipart/form-data" class="mb-4">
+                <div class="mb-4">
+                    <label for="file" class="block text-sm font-medium text-gray-700 mb-2">Select File</label>
+                    <div class="flex items-center">
+                        <input type="file" id="file" name="file" accept=".csv, .xlsx" required 
+                               class="form-input flex-grow rounded-r-none">
+                        <button type="submit" class="btn-primary rounded-l-none flex items-center">
+                            <i class="bi bi-upload mr-2"></i> Upload
+                        </button>
+                    </div>
+                    <p class="mt-2 text-sm text-gray-500">Accepted formats: CSV, Excel (.xlsx)</p>
+                </div>
+        </form>
+
+            <div class="border-t border-gray-200 pt-4 mt-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Required Fields</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div class="flex items-center text-sm">
+                        <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                        <span>First Name</span>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                        <span>Last Name</span>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                        <span>Email</span>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                        <span>Phone</span>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                        <span>Address</span>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                        <span>City</span>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                        <span>State</span>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                        <span>Pincode</span>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                        <span>Payment Method</span>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                        <span>Quantity</span>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                        <span>Status</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Information Section -->
+    <div id="modelInfo" class="card mb-8 hidden">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Model Information</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Model Performance</h4>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-600">Accuracy</p>
+                                <p class="text-xl font-bold text-primary" id="modelAccuracy">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Precision</p>
+                                <p class="text-xl font-bold text-primary" id="modelPrecision">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Recall</p>
+                                <p class="text-xl font-bold text-primary" id="modelRecall">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">F1 Score</p>
+                                <p class="text-xl font-bold text-primary" id="modelF1">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Feature Importance</h4>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div id="featureImportanceList" class="space-y-2">
+                            <!-- Feature importance items will be added here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h4 class="text-sm font-medium text-gray-700 mb-2">Feature Importance Visualization</h4>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <img id="featureImportancePlot" src="" alt="Feature Importance Plot" class="w-full h-auto">
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-200 pt-4">
+                <h4 class="text-sm font-medium text-gray-700 mb-2">Model Details</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-600">Model Type</p>
+                        <p class="text-sm font-medium" id="modelType">-</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Last Trained</p>
+                        <p class="text-sm font-medium" id="lastTrained">-</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Training Samples</p>
+                        <p class="text-sm font-medium" id="trainingSamples">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        {% if rto_results %}
+    <div class="card mb-8">
+        <div class="p-4 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">RTO Risk Analysis Results</h2>
+                    <p class="text-sm text-gray-600 mt-1">Showing {{ rto_results|length }} orders</p>
+                </div>
+                <div class="flex space-x-2">
+                    <div class="relative">
+                        <input type="text" id="searchInput" placeholder="Search orders..." 
+                               class="form-input text-sm pl-10 w-64">
+                        <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <div class="relative">
+                        <select id="filterRisk" class="form-select text-sm pl-10 pr-10 w-40">
+                            <option value="">All Risks</option>
+                            <option value="High">High Risk</option>
+                            <option value="Medium">Medium Risk</option>
+                            <option value="Low">Low Risk</option>
+                        </select>
+                        <i class="bi bi-funnel absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Risk Distribution Chart -->
+        <div class="p-4 border-b border-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700 mb-3">Risk Distribution</h3>
+                    <div class="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+                        <div class="w-full max-w-xs">
+                            <div class="mb-2 flex justify-between items-center">
+                                <span class="text-sm font-medium text-red-600">High Risk</span>
+                                <span class="text-sm font-medium text-gray-700">
+                                    {{ (rto_results|selectattr('rto_risk', 'equalto', 'High')|list|length / rto_results|length * 100)|round|int }}%
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                                <div class="bg-red-500 h-2.5 rounded-full" style="width: {{ (rto_results|selectattr('rto_risk', 'equalto', 'High')|list|length / rto_results|length * 100)|round|int }}%"></div>
+                            </div>
+                            
+                            <div class="mb-2 flex justify-between items-center">
+                                <span class="text-sm font-medium text-yellow-600">Medium Risk</span>
+                                <span class="text-sm font-medium text-gray-700">
+                                    {{ (rto_results|selectattr('rto_risk', 'equalto', 'Medium')|list|length / rto_results|length * 100)|round|int }}%
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                                <div class="bg-yellow-500 h-2.5 rounded-full" style="width: {{ (rto_results|selectattr('rto_risk', 'equalto', 'Medium')|list|length / rto_results|length * 100)|round|int }}%"></div>
+                            </div>
+                            
+                            <div class="mb-2 flex justify-between items-center">
+                                <span class="text-sm font-medium text-green-600">Low Risk</span>
+                                <span class="text-sm font-medium text-gray-700">
+                                    {{ (rto_results|selectattr('rto_risk', 'equalto', 'Low')|list|length / rto_results|length * 100)|round|int }}%
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="bg-green-500 h-2.5 rounded-full" style="width: {{ (rto_results|selectattr('rto_risk', 'equalto', 'Low')|list|length / rto_results|length * 100)|round|int }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700 mb-3">Risk by Status</h3>
+                    <div class="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+                        <div class="w-full max-w-xs">
+                            <div class="mb-2 flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">Pending</span>
+                                <span class="text-sm font-medium text-gray-700">
+                                    {{ (rto_results|selectattr('status', 'equalto', 'Pending')|list|length / rto_results|length * 100)|round|int }}%
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                                <div class="bg-yellow-500 h-2.5 rounded-full" style="width: {{ (rto_results|selectattr('status', 'equalto', 'Pending')|list|length / rto_results|length * 100)|round|int }}%"></div>
+                            </div>
+                            
+                            <div class="mb-2 flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">Shipped</span>
+                                <span class="text-sm font-medium text-gray-700">
+                                    {{ (rto_results|selectattr('status', 'equalto', 'Shipped')|list|length / rto_results|length * 100)|round|int }}%
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                                <div class="bg-blue-500 h-2.5 rounded-full" style="width: {{ (rto_results|selectattr('status', 'equalto', 'Shipped')|list|length / rto_results|length * 100)|round|int }}%"></div>
+                            </div>
+                            
+                            <div class="mb-2 flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">Delivered</span>
+                                <span class="text-sm font-medium text-gray-700">
+                                    {{ (rto_results|selectattr('status', 'equalto', 'Delivered')|list|length / rto_results|length * 100)|round|int }}%
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="bg-green-500 h-2.5 rounded-full" style="width: {{ (rto_results|selectattr('status', 'equalto', 'Delivered')|list|length / rto_results|length * 100)|round|int }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200" id="ordersTable">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Details</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RTO Risk</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for order in rto_results %}
+                    <tr class="hover:bg-gray-50 order-row" data-risk="{{ order.rto_risk }}">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ order.first_name }} {{ order.last_name }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ order.email }}</div>
+                            <div class="text-sm text-gray-500">{{ order.phone }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">{{ order.address_line1 }}</div>
+                            {% if order.address_line2 %}
+                            <div class="text-sm text-gray-500">{{ order.address_line2 }}</div>
+                            {% endif %}
+                            <div class="text-sm text-gray-500">{{ order.city }}, {{ order.state }} {{ order.pincode }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">Qty: {{ order.quantity }}</div>
+                            <div class="text-sm text-gray-500">{{ order.payment_method }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                {% if order.status == 'Delivered' %}bg-green-100 text-green-800
+                                {% elif order.status == 'Shipped' %}bg-blue-100 text-blue-800
+                                {% elif order.status == 'Pending' %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ order.status }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-3 py-1 text-sm font-medium rounded-full 
+                                {% if order.rto_risk == 'High' %}bg-red-100 text-red-800
+                                {% elif order.rto_risk == 'Medium' %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-green-100 text-green-800{% endif %}">
+                                {{ order.rto_risk }}
+                            </span>
+                        </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="p-4 border-t border-gray-200">
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-500">
+                    <span class="font-medium">{{ rto_results|length }}</span> orders analyzed
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="exportToCSV()" class="btn-secondary text-sm">
+                        <i class="bi bi-download mr-2"></i> Export Results
+                    </button>
+                    <button onclick="window.print()" class="btn-primary text-sm">
+                        <i class="bi bi-printer mr-2"></i> Print Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+        {% endif %}
+</div>
+
+<!-- Help Modal -->
+<div id="helpModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Return Analytics Help</h3>
+            <button onclick="document.getElementById('helpModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-500">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="mt-2 text-sm text-gray-600">
+            <p class="mb-4">The Return Analytics tool helps you analyze and predict return-to-origin (RTO) risks for your orders.</p>
+            
+            <h4 class="font-medium text-gray-900 mb-2">How to use:</h4>
+            <ol class="list-decimal pl-5 mb-4 space-y-2">
+                <li>Prepare a CSV or Excel file with the required order data fields</li>
+                <li>Upload the file using the form above</li>
+                <li>View the analysis results and risk predictions</li>
+                <li>Use the filters to find high-risk orders</li>
+                <li>Export or print the results for further analysis</li>
+            </ol>
+            
+            <h4 class="font-medium text-gray-900 mb-2">Risk Levels:</h4>
+            <ul class="list-disc pl-5 mb-4 space-y-2">
+                <li><span class="font-medium text-red-600">High Risk</span> - Orders with a high probability of being returned</li>
+                <li><span class="font-medium text-yellow-600">Medium Risk</span> - Orders with moderate return probability</li>
+                <li><span class="font-medium text-green-600">Low Risk</span> - Orders with low return probability</li>
+            </ul>
+            
+            <h4 class="font-medium text-gray-900 mb-2">Factors Considered:</h4>
+            <ul class="list-disc pl-5 space-y-2">
+                <li>Address classification (Urban vs Remote)</li>
+                <li>Order status</li>
+                <li>Payment method</li>
+                <li>Order quantity</li>
+                <li>Customer location</li>
+            </ul>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button onclick="document.getElementById('helpModal').classList.add('hidden')" class="btn-primary">
+                Got it
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-control, .form-select {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    background-color: #f8fafc;
+    transition: border-color 0.15s ease-in-out;
+    height: auto;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #e2e8f0;
+    box-shadow: none;
+    outline: none;
+    background-color: #fff;
+}
+
+.form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1a202c;
+    margin-bottom: 0.5rem;
+}
+
+.form-floating > .form-control,
+.form-floating > .form-select {
+    height: auto;
+    padding: 0.75rem 1rem;
+}
+
+.form-floating > label {
+    padding: 0.75rem 1rem;
+    color: #64748b;
+}
+
+.form-floating > .form-control:focus ~ label,
+.form-floating > .form-control:not(:placeholder-shown) ~ label,
+.form-floating > .form-select ~ label {
+    transform: scale(0.85) translateY(-1rem) translateX(0.15rem);
+    background-color: transparent;
+    padding: 0 0.5rem;
+    height: auto;
+}
+
+.form-floating > textarea.form-control {
+    height: 100px;
+}
+
+.card.bg-light {
+    background-color: transparent !important;
+}
+
+.card {
+    border: none;
+    background: transparent;
+}
+
+.card-body {
+    padding: 1.5rem 0;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+}
+
+.alert {
+    border-radius: 0.5rem;
+}
+
+.input-group-text {
+    background-color: #f8fafc;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.form-text {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        const searchValue = this.value.toLowerCase();
+        const rows = document.querySelectorAll('.order-row');
+        
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(searchValue)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+    
+    // Filter by risk level
+    document.getElementById('filterRisk').addEventListener('change', function() {
+        const filterValue = this.value;
+        const rows = document.querySelectorAll('.order-row');
+        
+        rows.forEach(row => {
+            if (filterValue === '' || row.getAttribute('data-risk') === filterValue) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+});
+
+function exportToCSV() {
+    // Get the table
+    const table = document.getElementById('ordersTable');
+    
+    // Create CSV content
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Get headers
+    const headers = [];
+    const headerCells = table.querySelectorAll('thead th');
+    headerCells.forEach(cell => {
+        headers.push('"' + cell.textContent.trim() + '"');
+    });
+    csvContent += headers.join(',') + '\n';
+    
+    // Get rows
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const rowData = [];
+        const cells = row.querySelectorAll('td');
+        
+        // Process each cell
+        cells.forEach(cell => {
+            let cellContent = '';
+            
+            // Handle different cell structures
+            if (cell.querySelector('.text-sm.font-medium.text-gray-900')) {
+                // Customer name cell
+                cellContent = cell.querySelector('.text-sm.font-medium.text-gray-900').textContent.trim();
+            } else if (cell.querySelectorAll('.text-sm').length > 0) {
+                // Contact cell with multiple lines
+                const textElements = cell.querySelectorAll('.text-sm');
+                cellContent = Array.from(textElements).map(el => el.textContent.trim()).join(' | ');
+            } else if (cell.querySelector('span')) {
+                // Status or RTO Risk cell with badge
+                cellContent = cell.querySelector('span').textContent.trim();
+            } else {
+                // Default case
+                cellContent = cell.textContent.trim();
+            }
+            
+            // Clean the content for CSV
+            cellContent = cellContent.replace(/"/g, '""'); // Escape quotes
+            cellContent = '"' + cellContent + '"'; // Wrap in quotes
+            
+            rowData.push(cellContent);
+        });
+        
+        csvContent += rowData.join(',') + '\n';
+    });
+    
+    // Create download link
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "rto_analysis_results.csv");
+    document.body.appendChild(link);
+    
+    // Trigger download
+    link.click();
+    
+    // Clean up
+    document.body.removeChild(link);
+}
+
+function trainModel() {
+    // Show loading state
+    const trainButton = document.querySelector('button[onclick="trainModel()"]');
+    const originalText = trainButton.innerHTML;
+    trainButton.innerHTML = '<i class="bi bi-arrow-repeat mr-1 animate-spin"></i> Training...';
+    trainButton.disabled = true;
+    
+    fetch('/train_rto_model', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update model information
+            document.getElementById('modelAccuracy').textContent = (data.metrics.accuracy * 100).toFixed(2) + '%';
+            document.getElementById('modelPrecision').textContent = (data.metrics.precision * 100).toFixed(2) + '%';
+            document.getElementById('modelRecall').textContent = (data.metrics.recall * 100).toFixed(2) + '%';
+            document.getElementById('modelF1').textContent = (data.metrics.f1_score * 100).toFixed(2) + '%';
+            
+            // Update feature importance
+            const featureList = document.getElementById('featureImportanceList');
+            featureList.innerHTML = '';
+            
+            data.feature_importance.forEach(feature => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center';
+                item.innerHTML = `
+                    <span class="text-sm text-gray-700">${feature.feature}</span>
+                    <span class="text-sm font-medium text-primary">${(feature.importance * 100).toFixed(2)}%</span>
+                `;
+                featureList.appendChild(item);
+            });
+            
+            // Update feature importance plot
+            document.getElementById('featureImportancePlot').src = data.plot_path + '?t=' + new Date().getTime();
+            
+            // Show model information section
+            document.getElementById('modelInfo').classList.remove('hidden');
+            
+            // Show success message
+            alert(`Model trained successfully!\nAccuracy: ${(data.metrics.accuracy * 100).toFixed(2)}%\nF1 Score: ${(data.metrics.f1_score * 100).toFixed(2)}%`);
+        } else {
+            alert('Error training model: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error training model. Please try again.');
+    })
+    .finally(() => {
+        // Restore button state
+        trainButton.innerHTML = originalText;
+        trainButton.disabled = false;
+    });
+}
+</script>
+{% endblock %}

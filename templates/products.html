@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Products{% endblock %}
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Products</h1>
+    <a href="{{ url_for('add_product') }}" class="btn-primary flex items-center">
+        <i class="bi bi-plus-lg mr-2"></i> Add Product
+    </a>
+</div>
+
+<div class="card">
+    <div class="p-6">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Title</th>
+                        <th>SKU</th>
+                        <th>Stock</th>
+                        <th>Category</th>
+                        <th>Dimensions</th>
+                        <th>Weight</th>
+                        <th>Shelf Life (Days)</th>
+                        <th>Expiration Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for product in products %}
+                    <tr class="hover:bg-gray-50">
+                        <td>
+                            {% if product.image %}
+                            <img src="{{ url_for('static', filename='uploads/' + product.image) }}" alt="{{ product.title }}" class="w-12 h-12 object-cover rounded-md">
+                            {% else %}
+                            <div class="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center">
+                                <i class="bi bi-image text-gray-400"></i>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>{{ product.title }}</td>
+                        <td>{{ product.sku }}</td>
+                        <td>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                {% if product.stock < 10 %}
+                                    bg-red-100 text-red-800
+                                {% elif product.stock < 20 %}
+                                    bg-yellow-100 text-yellow-800
+                                {% else %}
+                                    bg-green-100 text-green-800
+                                {% endif %}">
+                                {{ product.stock }}
+                            </span>
+                        </td>
+                        <td>{{ product.category }}</td>
+                        <td>{{ product.dimensions }}</td>
+                        <td>{{ product.weight }}</td>
+                        <td>{{ product.shelf_life }}</td>
+                        <td>{{ product.expiration_date.strftime('%Y-%m-%d') if product.expiration_date else 'N/A' }}</td>
+                        <td>
+                            <div class="flex space-x-2">
+                                <a href="{{ url_for('product_detail', id=product.id) }}" class="text-blue-600 hover:text-blue-800">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('edit_product', id=product.id) }}" class="text-primary hover:text-primary/80">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form action="{{ url_for('delete_product', id=product.id) }}" method="post" class="inline">
+                                    <button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Are you sure you want to delete this product?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

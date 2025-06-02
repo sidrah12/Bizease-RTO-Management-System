@@ -1,0 +1,115 @@
+<div id="orderDetails">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-2">
+            <p class="flex items-center">
+                <span class="font-medium text-gray-700 w-24">Customer:</span>
+                <span>{{ order.customer_name }}</span>
+            </p>
+            <p class="flex items-center">
+                <span class="font-medium text-gray-700 w-24">Email:</span>
+                <span>{{ order.email }}</span>
+            </p>
+            <p class="flex items-center">
+                <span class="font-medium text-gray-700 w-24">Phone:</span>
+                <span>{{ order.phone }}</span>
+            </p>
+        </div>
+        <div class="space-y-2">
+            <p class="flex items-center">
+                <span class="font-medium text-gray-700 w-24">Address:</span>
+                <span>{{ order.address }}, {{ order.city }}, {{ order.state }} {{ order.pincode }}</span>
+            </p>
+            <p class="flex items-center">
+                <span class="font-medium text-gray-700 w-24">Quantity:</span>
+                <span>{{ order.quantity }}</span>
+            </p>
+            <p class="flex items-center">
+                <span class="font-medium text-gray-700 w-24">Status:</span>
+                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                    {% if order.status == 'Delivered' %}bg-green-100 text-green-800
+                    {% elif order.status == 'Shipped' %}bg-blue-100 text-blue-800
+                    {% else %}bg-red-100 text-red-800{% endif %}">
+                    {{ order.status }}
+                </span>
+            </p>
+            <p class="flex items-center">
+                <span class="font-medium text-gray-700 w-24">RTO Risk:</span>
+                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                    {% if order.rto_risk == 'High' %}bg-red-100 text-red-800
+                    {% elif order.rto_risk == 'Medium' %}bg-yellow-100 text-yellow-800
+                    {% else %}bg-green-100 text-green-800{% endif %}">
+                    {{ order.rto_risk }}
+                </span>
+            </p>
+        </div>
+    </div>
+    
+    {% if order.status == 'Cancelled' %}
+    <div class="mt-6">
+        <form action="{{ url_for('restock', order_id=order.id) }}" method="post" class="restock-form" id="restockForm">
+            <button type="submit" class="btn-success flex items-center">
+                <i class="bi bi-box-seam mr-2"></i> Restock
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <div class="mt-6 bg-blue-50 border-l-4 border-blue-500 p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="bi bi-info-circle-fill text-blue-500"></i>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-blue-700">This order cannot be restocked because it is not cancelled.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mt-6">
+        <button onclick="restartScanner()" class="btn-secondary flex items-center">
+            <i class="bi bi-camera-fill mr-2"></i> Scan Another Barcode
+        </button>
+    </div>
+</div>
+
+<script>
+    // Initialize restock form handler
+    function initRestockForm() {
+        const form = document.querySelector('#restockForm');
+        if (!form) return; // Exit if no form found
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams(new FormData(this))
+            })
+            .then(response => response.text())
+            .then(html => {
+                const container = document.getElementById('orderDetailsContainer');
+                if (container) {
+                    container.innerHTML = html;
+                }
+            })
+            .catch(error => {
+                console.error('Error restocking:', error);
+                const errorHtml = `
+                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+                        <p>Error restocking order. Please try again.</p>
+                    </div>
+                `;
+                const container = document.getElementById('orderDetailsContainer');
+                if (container) {
+                    container.insertAdjacentHTML('afterbegin', errorHtml);
+                }
+            });
+        });
+    }
+
+    // Initialize the form handler when the content is loaded
+    initRestockForm();
+</script> 

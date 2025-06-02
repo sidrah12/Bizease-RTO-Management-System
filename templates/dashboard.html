@@ -1,0 +1,617 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}
+<div class="flex justify-between items-center">
+    <h1 class="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
+    <div class="flex items-center space-x-4">
+        <button onclick="refreshDashboard()" class="p-2 text-gray-600 hover:text-primary transition-colors" title="Refresh Dashboard">
+            <i class="bi bi-arrow-clockwise text-xl"></i>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Quick Stats -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="text-center">
+                <p class="text-sm text-gray-600">Today's Orders</p>
+                <p class="text-2xl font-bold text-primary">{{ today_orders|default(0) }}</p>
+                <p class="text-xs text-gray-500">vs yesterday: 
+                    <span class="{% if today_orders > yesterday_orders %}text-green-600{% else %}text-red-600{% endif %}">
+                        {{ ((today_orders - yesterday_orders) / yesterday_orders * 100)|round|default(0) }}%
+                    </span>
+                </p>
+            </div>
+            <div class="text-center">
+                <p class="text-sm text-gray-600">Revenue (Today)</p>
+                <p class="text-2xl font-bold text-primary">₹{{ today_revenue|default(0)|round(2) }}</p>
+                <p class="text-xs text-gray-500">vs yesterday: 
+                    <span class="{% if today_revenue > yesterday_revenue %}text-green-600{% else %}text-red-600{% endif %}">
+                        {{ ((today_revenue - yesterday_revenue) / yesterday_revenue * 100)|round|default(0) }}%
+                    </span>
+                </p>
+            </div>
+            <div class="text-center">
+                <p class="text-sm text-gray-600">Avg Order Value</p>
+                <p class="text-2xl font-bold text-primary">₹{{ avg_order_value|default(0)|round(2) }}</p>
+                <p class="text-xs text-gray-500">Last 30 days</p>
+            </div>
+            <div class="text-center">
+                <p class="text-sm text-gray-600">RTO Rate</p>
+                <p class="text-2xl font-bold {% if rto_rate > 15 %}text-red-600{% else %}text-primary{% endif %}">
+                    {{ rto_rate|default(0)|round(1) }}%
+                </p>
+                <p class="text-xs text-gray-500">Last 30 days</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="flex flex-wrap gap-4">
+        <button onclick="window.location.href='{{ url_for('products') }}'" 
+                class="inline-flex items-center px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-all hover:scale-105">
+            <i class="bi bi-plus-circle text-primary mr-2"></i>
+            <span>Add Product</span>
+            <span class="ml-2 text-xs text-gray-500">({{ products_count }} total)</span>
+        </button>
+        <button onclick="window.location.href='{{ url_for('orders') }}'" 
+                class="inline-flex items-center px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-all hover:scale-105">
+            <i class="bi bi-cart-plus text-primary mr-2"></i>
+            <span>New Order</span>
+            <span class="ml-2 text-xs text-gray-500">({{ orders_count }} total)</span>
+        </button>
+        <button onclick="window.location.href='{{ url_for('rto_checker') }}'" 
+                class="inline-flex items-center px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-all hover:scale-105">
+            <i class="bi bi-shield-check text-primary mr-2"></i>
+            <span>Check RTO Risk</span>
+            <span class="ml-2 text-xs text-gray-500">({{ rto_data['High'] }} high risk)</span>
+        </button>
+        <!-- <button onclick="exportDashboardData()" 
+                class="inline-flex items-center px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-all hover:scale-105">
+            <i class="bi bi-download text-primary mr-2"></i>
+            <span>Export Data</span>
+        </button> -->
+    </div>
+
+    <!-- Alerts -->
+    {% if low_stock_products or expiring_products %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% if low_stock_products %}
+        <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg hover:shadow-md transition-shadow">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="bi bi-exclamation-triangle-fill text-yellow-400 text-xl"></i>
+                </div>
+                <div class="ml-3 flex-grow">
+                    <h3 class="text-sm font-medium text-yellow-800">Low Stock Alert!</h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p>{{ low_stock_products|length }} product(s) with low stock levels</p>
+                        <div class="mt-2 flex items-center justify-between">
+                            <button onclick="document.getElementById('lowStockTable').scrollIntoView({behavior: 'smooth'})" 
+                                    class="text-yellow-800 hover:text-yellow-900 font-medium inline-flex items-center">
+                                View Details
+                                <i class="bi bi-arrow-right ml-1"></i>
+                            </button>
+                            <span class="text-xs text-yellow-600">Updated {{ low_stock_last_check|default('just now') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
+    {% endif %}
+
+    {% if expiring_products %}
+        <div class="bg-red-50 border border-red-200 p-4 rounded-lg hover:shadow-md transition-shadow">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="bi bi-clock-fill text-red-400 text-xl"></i>
+                </div>
+                <div class="ml-3 flex-grow">
+                    <h3 class="text-sm font-medium text-red-800">Expiry Alert!</h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        <p>{{ expiring_products|length }} product(s) expiring within 30 days</p>
+                        <div class="mt-2 flex items-center justify-between">
+                            <button onclick="showExpiryDetails()" 
+                                    class="text-red-800 hover:text-red-900 font-medium inline-flex items-center">
+                                View Details
+                                <i class="bi bi-arrow-right ml-1"></i>
+                            </button>
+                            <span class="text-xs text-red-600">Updated {{ expiry_last_check|default('just now') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="card bg-gradient-to-br from-primary to-primary/80 transform hover:scale-105 transition-all cursor-pointer"
+             onclick="window.location.href='{{ url_for('products') }}'">
+            <div class="p-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h5 class="text-white/80 text-sm font-medium">Total Products</h5>
+                        <h2 class="text-white text-3xl font-bold mt-2">{{ products_count }}</h2>
+                    </div>
+                    <div class="p-2 bg-white/10 rounded-lg">
+                        <i class="bi bi-box text-white text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center text-white/80 text-sm">
+                    <i class="bi bi-arrow-up-short"></i>
+                    <span>5% from last month</span>
+                </div>
+                <div class="mt-2 h-1 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-white" style="width: {{ (products_count / max_products * 100)|round }}%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="card bg-gradient-to-br from-green-500 to-green-600 transform hover:scale-105 transition-transform cursor-pointer"
+             onclick="window.location.href='{{ url_for('orders') }}'">
+            <div class="p-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h5 class="text-white/80 text-sm font-medium">Total Orders</h5>
+                        <h2 class="text-white text-3xl font-bold mt-2">{{ orders_count }}</h2>
+                    </div>
+                    <div class="p-2 bg-white/10 rounded-lg">
+                        <i class="bi bi-cart text-white text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center text-white/80 text-sm">
+                    <i class="bi bi-arrow-up-short"></i>
+                    <span>12% from last month</span>
+                </div>
+            </div>
+        </div>
+        <div class="card bg-gradient-to-br from-yellow-500 to-yellow-600 transform hover:scale-105 transition-transform cursor-pointer" 
+             id="lowStockCard">
+            <div class="p-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h5 class="text-white/80 text-sm font-medium">Low Stock Products</h5>
+                        <h2 class="text-white text-3xl font-bold mt-2">{{ low_stock_products|length }}</h2>
+                    </div>
+                    <div class="p-2 bg-white/10 rounded-lg">
+                        <i class="bi bi-exclamation-triangle text-white text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center text-white/80 text-sm">
+                    <i class="bi bi-arrow-down-short"></i>
+                    <span>3% from last week</span>
+                </div>
+            </div>
+        </div>
+        <div class="card bg-gradient-to-br from-red-500 to-red-600 transform hover:scale-105 transition-transform cursor-pointer"
+             onclick="window.location.href='{{ url_for('rto_checker') }}'">
+            <div class="p-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h5 class="text-white/80 text-sm font-medium">High RTO Risk</h5>
+                        <h2 class="text-white text-3xl font-bold mt-2">{{ rto_data['High'] }}</h2>
+                    </div>
+                    <div class="p-2 bg-white/10 rounded-lg">
+                        <i class="bi bi-shield-exclamation text-white text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center text-white/80 text-sm">
+                    <i class="bi bi-arrow-down-short"></i>
+                    <span>2% from last week</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="card">
+            <div class="card-header flex justify-between items-center">
+                <div>
+                    <h5 class="text-lg font-semibold text-gray-900">Order Status Distribution</h5>
+                    <p class="text-sm text-gray-500">Overview of order statuses</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <select id="statusChartPeriod" class="text-sm border-gray-300 rounded-md focus:ring-primary focus:border-primary" 
+                            onchange="updateStatusChart()">
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="year">This Year</option>
+                    </select>
+                    <!-- <button class="text-gray-400 hover:text-primary" onclick="downloadChart('statusChart', 'order_status')">
+                        <i class="bi bi-download"></i>
+                    </button> -->
+                </div>
+            </div>
+            <div class="p-6">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header flex justify-between items-center">
+                <h5 class="text-lg font-semibold text-gray-900">RTO Risk Distribution</h5>
+                <div class="flex items-center space-x-2">
+                    <select id="rtoChartPeriod" class="text-sm border-gray-300 rounded-md focus:ring-primary focus:border-primary" onchange="updateRTOChart()">
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="year">This Year</option>
+                    </select>
+                </div>
+            </div>
+            <div class="p-6">
+                <canvas id="rtoChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="card">
+        <div class="card-header flex justify-between items-center">
+            <div>
+                <h5 class="text-lg font-semibold text-gray-900">Recent Orders</h5>
+                <p class="text-sm text-gray-500">Last 10 orders received</p>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="relative">
+                    <input type="text" id="orderSearch" placeholder="Search orders..." 
+                           class="w-48 pl-8 pr-4 py-1 text-sm border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                           onkeyup="searchOrders()">
+                    <i class="bi bi-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
+                </div>
+                <a href="{{ url_for('orders') }}" class="text-primary hover:text-primary/80 text-sm font-medium">View All</a>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="table-container">
+                <table class="table" id="recentOrdersTable">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Status</th>
+                                    <th>RTO Risk</th>
+                            <th>Action</th>
+                                </tr>
+                            </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for order_tuple in recent_orders %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="font-medium">#{{ order_tuple[0].id }}</td>
+                            <td>{{ order_tuple[0].customer_name }}</td>
+                            <td>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    {% if order_tuple[0].status == 'Delivered' %}
+                                        bg-green-100 text-green-800
+                                    {% elif order_tuple[0].status == 'Shipped' %}
+                                        bg-blue-100 text-blue-800
+                                    {% else %}
+                                        bg-yellow-100 text-yellow-800
+                                    {% endif %}">
+                                    {{ order_tuple[0].status }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    {% if order_tuple[0].rto_risk == 'High' %}
+                                        bg-red-100 text-red-800
+                                    {% elif order_tuple[0].rto_risk == 'Medium' %}
+                                        bg-yellow-100 text-yellow-800
+                                    {% else %}
+                                        bg-green-100 text-green-800
+                                    {% endif %}">
+                                    {{ order_tuple[0].rto_risk }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="text-primary hover:text-primary/80" onclick="viewOrderDetails('{{ order_tuple[0].id }}')">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+    <div class="card" id="lowStockTable">
+        <div class="card-header flex justify-between items-center">
+            <h5 class="text-lg font-semibold text-gray-900">Low Stock Products</h5>
+            <a href="{{ url_for('products') }}" class="text-primary hover:text-primary/80 text-sm font-medium">View All</a>
+        </div>
+        <div class="p-6">
+            <div class="table-container">
+                <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>SKU</th>
+                                    <th>Stock</th>
+                                    <th>Category</th>
+                            <th>Action</th>
+                                </tr>
+                            </thead>
+                    <tbody class="divide-y divide-gray-100">
+                                {% for product in low_stock_products %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="font-medium">{{ product.title }}</td>
+                                    <td>{{ product.sku }}</td>
+                            <td>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    {{ product.stock }}
+                                </span>
+                            </td>
+                                    <td>{{ product.category }}</td>
+                            <td>
+                                <button class="text-primary hover:text-primary/80" onclick="restockProduct('{{ product.id }}')">
+                                    <i class="bi bi-plus-circle"></i>
+                                </button>
+                            </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+    </div>
+</div>
+
+<!-- Expiry Details Modal -->
+<div id="expiryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full" x-data="{ open: false }">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Expiring Products</h3>
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+                {% for product in expiring_products %}
+                <div class="p-3 bg-red-50 rounded-lg">
+                    <h4 class="font-medium text-red-800">{{ product.title }}</h4>
+                    <p class="text-sm text-red-600">SKU: {{ product.sku }}</p>
+                    <p class="text-sm text-red-600">Expires: {{ product.expiration_date.strftime('%Y-%m-%d') }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="mt-4">
+                <button onclick="hideExpiryDetails()" class="w-full inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Order Status Chart
+    let statusChart;
+    function initStatusChart() {
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+        statusChart = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Pending', 'Shipped', 'Delivered', 'Cancelled'],
+            datasets: [{
+                data: [
+                    {{ status_data['Pending'] }},
+                    {{ status_data['Shipped'] }},
+                    {{ status_data['Delivered'] }},
+                    {{ status_data['Cancelled'] }}
+                ],
+                backgroundColor: [
+                        '#F59E0B',
+                        '#3B82F6',
+                        '#10B981',
+                        '#EF4444'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value * 100) / total);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // RTO Risk Chart
+    let rtoChart;
+    function initRTOChart() {
+    const rtoCtx = document.getElementById('rtoChart').getContext('2d');
+        rtoChart = new Chart(rtoCtx, {
+        type: 'bar',
+        data: {
+            labels: ['High', 'Medium', 'Low'],
+            datasets: [{
+                label: 'Number of Orders',
+                data: [
+                    {{ rto_data['High'] }},
+                    {{ rto_data['Medium'] }},
+                    {{ rto_data['Low'] }}
+                ],
+                backgroundColor: [
+                        '#EF4444',
+                        '#F59E0B',
+                        '#10B981'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.y;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value * 100) / total);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                }
+            },
+            scales: {
+                y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Initialize charts
+    initStatusChart();
+    initRTOChart();
+
+    // Update charts based on period selection
+    function updateStatusChart() {
+        const period = document.getElementById('statusChartPeriod').value;
+        // Here you would typically fetch new data based on the selected period
+        // For now, we'll just simulate a data update
+        const newData = {
+            week: [10, 15, 20, 5],
+            month: [30, 45, 60, 15],
+            year: [120, 180, 240, 60]
+        };
+        statusChart.data.datasets[0].data = newData[period];
+        statusChart.update();
+    }
+
+    function updateRTOChart() {
+        const period = document.getElementById('rtoChartPeriod').value;
+        // Here you would typically fetch new data based on the selected period
+        // For now, we'll just simulate a data update
+        const newData = {
+            week: [3, 7, 15],
+            month: [9, 21, 45],
+            year: [36, 84, 180]
+        };
+        rtoChart.data.datasets[0].data = newData[period];
+        rtoChart.update();
+    }
+
+    // Modal functions
+    function showExpiryDetails() {
+        document.getElementById('expiryModal').classList.remove('hidden');
+    }
+
+    function hideExpiryDetails() {
+        document.getElementById('expiryModal').classList.add('hidden');
+    }
+
+    // Action functions
+    function viewOrderDetails(orderId) {
+        window.location.href = `/orders/${orderId}`;
+    }
+
+    function restockProduct(productId) {
+        window.location.href = `/products/edit/${productId}`;
+    }
+
+    // New functions for enhanced functionality
+    function searchOrders() {
+        const searchInput = document.getElementById('orderSearch');
+        const searchText = searchInput.value.toLowerCase().trim();
+        const orderTable = document.getElementById('recentOrdersTable');
+        
+        if (orderTable) {
+            const rows = orderTable.getElementsByTagName('tr');
+            
+            for (let i = 1; i < rows.length; i++) { // Start from 1 to skip header
+                const row = rows[i];
+                const text = row.textContent || row.innerText;
+                
+                if (text.toLowerCase().includes(searchText)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        }
+    }
+
+    function refreshDashboard() {
+        const button = event.currentTarget;
+        button.classList.add('animate-spin');
+        // Here you would typically make an AJAX call to refresh the data
+        setTimeout(() => {
+            button.classList.remove('animate-spin');
+            // Simulate refresh complete
+            showToast('Dashboard refreshed successfully!');
+        }, 1000);
+    }
+
+    function downloadChart(chartId, filename) {
+        const canvas = document.getElementById(chartId);
+        const link = document.createElement('a');
+        link.download = `${filename}_${new Date().toISOString().split('T')[0]}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+
+    function exportDashboardData() {
+        // Here you would typically make an AJAX call to get the data
+        const data = {
+            orders: [], // Add your order data here
+            products: [], // Add your product data here
+            metrics: {} // Add your metrics here
+        };
+        
+        const csv = convertToCSV(data);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `dashboard_export_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+    }
+
+    function convertToCSV(data) {
+        // Implementation of CSV conversion
+        // This is a placeholder - implement actual CSV conversion based on your data structure
+        return 'data,value\n' + Object.entries(data).map(([k, v]) => `${k},${v}`).join('\n');
+    }
+
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-y-0 opacity-100';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('translate-y-full', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+</script>
+{% endblock %}
